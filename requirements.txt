@@ -1,0 +1,6 @@
+langchain
+ollama
+mcp
+langchain-ollama
+modelcontextprotocol
+pyinstaller
