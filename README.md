@@ -32,13 +32,30 @@ Selecciona un archivo .txt con los datos semanales que quieras recabar y recibe 
 ```bash
 https://ollama.com/download/windows
 ```
-2. Después de correr Ollama por primera vez, haz clic en Permitir acceso para redes privadas.
+2. Después de correr Ollama por primera vez, haz clic en "Permitir acceso para redes privadas" y mantén abierta la aplicación de escritorio.
 
 3. En el CMD, ejecuta:
 
 ```bash
 ollama pull qwen2.5:1.5b
 ```
+4. Descarga Node Js en su última versión LTS (Soporte a largo plazo):
+
+```bash
+https://nodejs.org/
+```
+5. Abre el archivo que se descargó. Sigue las instrucciones del instalador haciendo clic en "Next".
+
+#### Importante: 
+Deja todas las opciones por defecto. El instalador automáticamente agregará Node.js al "PATH" de tu sistema
+
+6. Reinicia tu computadora.
+
+7. Finalmente, abre nuevamente tu terminal (Busca cmd o Símbolo del sistema en Windows).
+
+Escribe npx -v y presiona Enter.
+
+Si te da la versión del programa (por ejemplo, 10.8.2), significa que todo está listo para que ejecutes el main.exe.
 
 ## Correr en local
 
@@ -47,9 +64,10 @@ Para utilizar esta aplicación debes:
 1. Descarga el ejecutable desde Releases en el repositorio:
 
 ```bash
-    URL .exe
+https://github.com/HamletNerey/Organizador-CSV/releases/tag/v1.0.0
 ```
 2. Ejecuta el programa dando doble click y comprueba su funcionamiento seleccionando un archivo .txt desde tu explorador de archivos.
+
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)

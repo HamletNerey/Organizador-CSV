@@ -7,29 +7,40 @@ import os
 import tkinter as tk
 from tkinter import filedialog
 import platform
-import subprocess
 import shutil
 
 MODELO= "qwen2.5:1.5b"
-llm= ChatOllama(model= MODELO, temperature=0.1)
+llm= ChatOllama(model= MODELO, temperature=0.0)
 
 prompt_extractor= PromptTemplate.from_template(""" 
         Actúa como un analista de datos, extrae y cataloga cada una de las clases del archivo desestructurado.
-        Identifica y clasifica las columnas más lógicas, por ejemplo: fechas, nombres de clientes, conceptos, monto, 
-        productos, servicios,etc.
+        Identifica y clasifica las columnas más lógicas, por ejemplo: fechas, nombres de clientes, conceptos de pago, monto, 
+        productos, servicios, lugares, etc.
         Se conciso y devuelve únicamente la información estructurada en una lista, sin texto introductorio.\n\n
         Texto:\n{texto}              
 """)
 
 prompt_formato= PromptTemplate.from_template("""
-        Actúa como un estricto formateador de archivos. Toma los adatos devueltos por el prompt_extractor y conviértela.
-        Al convertirlo, usa SOLO un formato CSV delimitado por comas. La primera fila DEBE contener los encabezados normalizados. 
+        Actúa como un estricto formateador de archivos. Toma los datos devueltos por el prompt_extractor y conviértelos.
+        Al convertirlo, usa SOLO un formato CSV delimitado por comas. La primera fila DEBE contener los encabezados normalizados, haciendo que dichos títulos sean cortos y resuman bien el contenido de la columna o fila. 
         No incluyas comillas invertidas de código, ni saludos, ni explicaciones o textos introductorios. Únicamente el texto del CSV en crudo.\n\n
         Información:\n{datos}
  """)
 
+prompt_calidad= PromptTemplate.from_template("""
+        Compara esta tabla CSV generada por pipeline_formato con el texto original.
+        Tu tarea es comprobar que todos los datos de la tabla existen en el texto original, 
+        listar los errores si la tabla inventó números, cambió fechas u omitió filas o clasificaciones importantes, eliminando el uso de palabras como "pesos", "dolares" o "euros", conservando solo el dato numérico.
+        para finalmente incorporarlas en una tabla nueva que será entregada al usuario.
+        Al convertirlo y aplicar los cambios, usa SOLO un formato CSV delimitado por comas. La primera fila DEBE contener los encabezados normalizados. 
+        No incluyas comillas invertidas de código, ni saludos, ni explicaciones o textos introductorios. Únicamente el texto del CSV en crudo.\n\n
+        Información:\n{control}
+""")
+
 pipeline_extraccion= prompt_extractor | llm
 pipeline_formato= prompt_formato | llm
+pipeline_calidad= prompt_calidad | llm
+
 
 async def inicio():
     root=tk.Tk()
@@ -43,7 +54,6 @@ async def inicio():
         return
     
     directorio_actual=os.path.dirname(entrada)    
-    #entrada=os.path.join(directorio_actual, "entrada.txt")
     salida=os.path.join(directorio_actual, "salida.csv")
     
     print(f"Carpeta en uso: {directorio_actual}")
@@ -56,13 +66,11 @@ async def inicio():
     print(f"Se encontró la ruta {ruta}")
     
     servidor= StdioServerParameters(command= ruta, args=["-y", "@modelcontextprotocol/server-filesystem", directorio_actual])
-    #subprocess.run(servidor, check=True)
     
     print("Inicializando...")
     async with stdio_client(servidor) as (read, write):
         async with ClientSession(read,write) as consulta:
             await consulta.initialize()
-            
             #Lectura MCP
             print(f"Leyendo archivo: {entrada}")
             resultado= await consulta.call_tool(
@@ -76,10 +84,13 @@ async def inicio():
             print("LLM 2: Actualizando formato...")
             formato= pipeline_formato.invoke({"datos":resultado_ext})
             
-            # Limpiar posibles bloques de código de markdown residuales
-            csv_final= formato.content.replace("```csv","").replace("```","").strip()
+            #Aquí se puede agregar un tercer LLM de estilo
+            print("LLM 3: Control de calidad...")
+            control= pipeline_calidad.invoke({"control":formato})
+            # Limpiamos posibles bloques de código de markdown residuales
+            csv_final= control.content.replace("```csv","").replace("```","").strip()
             
-            #Escirtura MCP
+            #Escritura MCP
             print(f"Guardando formato actualizado:{salida}")
             await consulta.call_tool(
                 "write_file", arguments={"path":salida, "content":csv_final})
